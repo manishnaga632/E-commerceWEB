@@ -116,7 +116,7 @@ const AdminDashboard = () => {
         <h1 className="dashboard-title">
           Welcome back, {admin?.name || 'Admin'} 👋
         </h1>
-        <p className="dashboard-subtitle">Here's what's happening with your store today</p>
+        <p className="dashboard-subtitle">Here s what s happening with your store today</p>
       </div>
 
       {stats.error && (
