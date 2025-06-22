@@ -7,12 +7,17 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useUser } from "./UserContext";
+import { toast } from "react-hot-toast";
+import { useRouter } from 'next/navigation'; // ✅ import router
+
+
 
 const WishlistContext = createContext();
 
 export const WishlistProvider = ({ children }) => {
   const [wishlistItems, setWishlistItems] = useState([]);
   const { userInfo, token } = useUser(); // ✅ include token
+  const router = useRouter(); // ✅ initialize router
 
   const fetchWishlist = async () => {
     try {
@@ -47,10 +52,24 @@ export const WishlistProvider = ({ children }) => {
     if (userInfo?.id) fetchWishlist();
   }, [userInfo]);
 
+
   const addToWishlist = async (product_id) => {
-    if (!userInfo?.id || !token) return;
+    // ✅ 1. Block if not logged in
+    if (!userInfo?.id || !token) {
+      toast.error("Please log in to use wishlist");
+      router.push("/login");
+      return; // 🔒 Stop here if not logged in
+    }
+
+    // ✅ 2. Prevent duplicate wishlist entry
+    const alreadyInWishlist = wishlistItems.some(item => item.product_id === product_id);
+    if (alreadyInWishlist) {
+      toast("Already in wishlist");
+      return;
+    }
 
     try {
+      // ✅ 3. Make backend call
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/wishlist/add_wishlist`, {
         method: "POST",
         headers: {
@@ -65,7 +84,7 @@ export const WishlistProvider = ({ children }) => {
 
       if (!response.ok) throw new Error("Failed to add to wishlist");
 
-      // Optionally fetch product details
+      // ✅ 4. Fetch product details
       const productRes = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/products/id/${product_id}`,
         {
@@ -74,14 +93,20 @@ export const WishlistProvider = ({ children }) => {
       );
       const product = await productRes.json();
 
+      // ✅ 5. Update local state
       setWishlistItems((prev) => [
         ...prev,
         { id: Date.now(), user_id: userInfo.id, product_id, product },
       ]);
+
+      // ✅ 6. Show success toast
+      toast.success("Added to wishlist");
     } catch (err) {
       console.error("Add wishlist error:", err);
+      toast.error("Error adding to wishlist");
     }
   };
+
 
   const removeFromWishlist = async (id) => {
     if (!token) return;

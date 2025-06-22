@@ -53,29 +53,74 @@ export const StateContext = ({ children }) => {
     }
   };
 
+  // const onAdd = async (product, quantity) => {
+  //   const existingItem = cartItems.find((item) => item.id === product.id);
+
+  //   let updatedCartItems;
+  //   let updatedQuantity = quantity;
+
+  //   if (existingItem) {
+  //     updatedQuantity = existingItem.quantity + quantity;
+  //     updatedCartItems = cartItems.map((item) =>
+  //       item.id === product.id ? { ...item, quantity: updatedQuantity } : item
+  //     );
+  //   } else {
+  //     updatedCartItems = [...cartItems, { ...product, quantity }];
+  //   }
+
+  //   setCartItems(updatedCartItems);
+  //   setTotalPrice(prev => prev + product.net_price * quantity);
+  //   setTotalQty(prev => prev + quantity);
+
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     if (!token) return;
+
+  //     await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cart/add`, {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //       body: JSON.stringify({
+  //         user_id: userInfo.id,
+  //         product_id: product.id,
+  //         quantity: updatedQuantity,
+  //         created_at: new Date().toISOString(),
+  //       }),
+  //     });
+
+  //     fetchCartItems(); // ✅ re-fetch to get updated backend_cart_id
+  //   } catch (err) {
+  //     console.error("Error syncing to backend cart:", err);
+  //   }
+
+  //   toast.success(`${quantity} ${product.name} added to the cart.`);
+  // };
+
+
+
+
   const onAdd = async (product, quantity) => {
-    const existingItem = cartItems.find((item) => item.id === product.id);
-
-    let updatedCartItems;
-    let updatedQuantity = quantity;
-
-    if (existingItem) {
-      updatedQuantity = existingItem.quantity + quantity;
-      updatedCartItems = cartItems.map((item) =>
-        item.id === product.id ? { ...item, quantity: updatedQuantity } : item
-      );
-    } else {
-      updatedCartItems = [...cartItems, { ...product, quantity }];
+    if (!userInfo?.id || !token) {
+      toast.error("Please log in to add to cart");
+      router.push("/login");
+      return;
     }
 
+    const existingItem = cartItems.find((item) => item.id === product.id);
+
+    if (existingItem) {
+      toast("Already in cart");
+      return;
+    }
+
+    const updatedCartItems = [...cartItems, { ...product, quantity }];
     setCartItems(updatedCartItems);
     setTotalPrice(prev => prev + product.net_price * quantity);
     setTotalQty(prev => prev + quantity);
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cart/add`, {
         method: "POST",
         headers: {
@@ -85,18 +130,25 @@ export const StateContext = ({ children }) => {
         body: JSON.stringify({
           user_id: userInfo.id,
           product_id: product.id,
-          quantity: updatedQuantity,
+          quantity,
           created_at: new Date().toISOString(),
         }),
       });
 
-      fetchCartItems(); // ✅ re-fetch to get updated backend_cart_id
+      fetchCartItems(); // Re-fetch with backend ID
+      toast.success(`${quantity} ${product.name} added to cart`);
     } catch (err) {
       console.error("Error syncing to backend cart:", err);
+      toast.error("Failed to sync with backend");
     }
-
-    toast.success(`${quantity} ${product.name} added to the cart.`);
   };
+
+
+
+
+
+
+
 
   const onRemove = async (product) => {
     const newCartItems = cartItems.filter((item) => item.id !== product.id);
